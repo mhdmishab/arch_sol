@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Sparkles, ArrowLeft, Cpu } from 'lucide-react';
+import { API_BASE_URL } from '../config';
 
 export function NewProject() {
   const navigate = useNavigate();
@@ -57,7 +58,7 @@ export function NewProject() {
     setLoading(true);
 
     try {
-      const response = await fetch('http://localhost:5000/api/projects', {
+      const response = await fetch(`${API_BASE_URL}/projects`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -83,7 +84,7 @@ export function NewProject() {
       // If we have requirements text, trigger the analysis immediately
       if (rawTextRequirements.trim() !== '') {
         console.log('Requirements present, auto-running analysis...');
-        await fetch(`http://localhost:5000/api/projects/${createdProject.id}/requirements/analyze`, {
+        await fetch(`${API_BASE_URL}/projects/${createdProject.id}/requirements/analyze`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

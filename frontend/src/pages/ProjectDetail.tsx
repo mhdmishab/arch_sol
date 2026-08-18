@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { API_BASE_URL } from '../config';
 import { 
   ArrowLeft, RefreshCw, AlertTriangle, CheckCircle, Cpu, 
   Save, Layers, FileText, Download,
@@ -315,7 +316,7 @@ export function ProjectDetail() {
     if (!id) return;
     setLoading(true);
     try {
-      const response = await fetch(`http://localhost:5000/api/projects/${id}`);
+      const response = await fetch(`${API_BASE_URL}/projects/${id}`);
       if (!response.ok) {
         throw new Error('Project not found.');
       }
@@ -344,7 +345,7 @@ export function ProjectDetail() {
     if (!id) return;
     setGeneratingOptions(true);
     try {
-      const response = await fetch(`http://localhost:5000/api/projects/${id}/architecture/generate`, {
+      const response = await fetch(`${API_BASE_URL}/projects/${id}/architecture/generate`, {
         method: 'POST'
       });
       if (!response.ok) throw new Error('Options generation failed.');
@@ -373,7 +374,7 @@ export function ProjectDetail() {
     setSelectedOptionView(optionId);
     if (!id) return;
     try {
-      const response = await fetch(`http://localhost:5000/api/projects/${id}`, {
+      const response = await fetch(`${API_BASE_URL}/projects/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ selectedOptionId: optionId })
@@ -392,7 +393,7 @@ export function ProjectDetail() {
     if (!id) return;
     setCalculatingCosts(true);
     try {
-      const response = await fetch(`http://localhost:5000/api/projects/${id}/cost/calculate`, {
+      const response = await fetch(`${API_BASE_URL}/projects/${id}/cost/calculate`, {
         method: 'POST'
       });
       if (!response.ok) throw new Error('Scenario pricing calculation failed.');
@@ -400,7 +401,7 @@ export function ProjectDetail() {
       setCostsCache(data);
       
       // Reload project to fetch updated service components pricing
-      const projRes = await fetch(`http://localhost:5000/api/projects/${id}`);
+      const projRes = await fetch(`${API_BASE_URL}/projects/${id}`);
       if (projRes.ok) {
         const updatedProj = await projRes.json();
         setProject(updatedProj);
@@ -427,7 +428,7 @@ export function ProjectDetail() {
     if (!id) return;
     setRunningCritic(true);
     try {
-      const response = await fetch(`http://localhost:5000/api/projects/${id}/critic/analyze`, {
+      const response = await fetch(`${API_BASE_URL}/projects/${id}/critic/analyze`, {
         method: 'POST'
       });
       if (!response.ok) throw new Error('Critic audit failed.');
@@ -454,7 +455,7 @@ export function ProjectDetail() {
     if (!id) return;
     setRunningWAF(true);
     try {
-      const response = await fetch(`http://localhost:5000/api/projects/${id}/well-architected/review`, {
+      const response = await fetch(`${API_BASE_URL}/projects/${id}/well-architected/review`, {
         method: 'POST'
       });
       if (!response.ok) throw new Error('WAF review failed.');
@@ -481,7 +482,7 @@ export function ProjectDetail() {
     if (!id) return;
     setGeneratingADRs(true);
     try {
-      const response = await fetch(`http://localhost:5000/api/projects/${id}/adr/generate`, {
+      const response = await fetch(`${API_BASE_URL}/projects/${id}/adr/generate`, {
         method: 'POST'
       });
       if (!response.ok) throw new Error('ADR generation failed.');
@@ -508,7 +509,7 @@ export function ProjectDetail() {
     if (!id) return;
     setUpdatingADRId(adrId);
     try {
-      const response = await fetch(`http://localhost:5000/api/projects/${id}/adr/${adrId}`, {
+      const response = await fetch(`${API_BASE_URL}/projects/${id}/adr/${adrId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: newStatus })
@@ -537,7 +538,7 @@ export function ProjectDetail() {
         payload.rawTextRequirements = customRawText;
       }
 
-      const response = await fetch(`http://localhost:5000/api/projects/${id}/requirements/analyze`, {
+      const response = await fetch(`${API_BASE_URL}/projects/${id}/requirements/analyze`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -572,7 +573,7 @@ export function ProjectDetail() {
     setSavingForm(true);
 
     try {
-      const response = await fetch(`http://localhost:5000/api/projects/${id}/requirements`, {
+      const response = await fetch(`${API_BASE_URL}/projects/${id}/requirements`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

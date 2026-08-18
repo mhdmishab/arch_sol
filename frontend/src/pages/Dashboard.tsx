@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Plus, Folder, Calendar, Cpu, ArrowRight, RefreshCw } from 'lucide-react';
+import { API_BASE_URL } from '../config';
 
 interface Project {
   id: string;
@@ -36,7 +37,7 @@ export function Dashboard() {
   const fetchProjects = async () => {
     setLoading(true);
     try {
-      const response = await fetch('http://localhost:5000/api/projects');
+      const response = await fetch(`${API_BASE_URL}/projects`);
       if (!response.ok) {
         throw new Error('Failed to fetch projects.');
       }
