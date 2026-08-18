@@ -90,6 +90,7 @@ export interface StructuredRequirements {
     m365LicenseTier?: string;
     m365UserCount?: number;
     powerAutomatePremiumAdminOnly?: boolean;
+    licensingModel?: 'User-based' | 'Business-based' | 'Enterprise-based';
   };
   development: {
     existingTeamSkills?: string;
@@ -344,7 +345,8 @@ export function createDefaultStructuredRequirements(data?: Partial<ArchitectureP
       costSensitivity: 'Medium',
       m365LicenseTier: 'None',
       m365UserCount: undefined,
-      powerAutomatePremiumAdminOnly: false
+      powerAutomatePremiumAdminOnly: false,
+      licensingModel: 'User-based'
     },
     development: {
       existingTeamSkills: '',
@@ -420,7 +422,8 @@ const StructuredRequirementsSchema = new Schema<StructuredRequirements>({
     costSensitivity: { type: String, enum: ['Low', 'Medium', 'High'], default: 'Medium' },
     m365LicenseTier: { type: String, default: 'None' },
     m365UserCount: { type: Number },
-    powerAutomatePremiumAdminOnly: { type: Boolean, default: false }
+    powerAutomatePremiumAdminOnly: { type: Boolean, default: false },
+    licensingModel: { type: String, enum: ['User-based', 'Business-based', 'Enterprise-based'], default: 'User-based' }
   },
   development: {
     existingTeamSkills: { type: String, default: '' },

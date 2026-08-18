@@ -74,6 +74,7 @@ interface StructuredRequirements {
     m365LicenseTier?: string;
     m365UserCount?: number;
     powerAutomatePremiumAdminOnly?: boolean;
+    licensingModel?: string;
   };
   development: {
     existingTeamSkills?: string;
@@ -1894,7 +1895,20 @@ export function ProjectDetail() {
                 <div className="pt-2 border-t border-white/5 mt-4 space-y-4">
                   <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Microsoft 365 & Power Platform Licensing</h4>
                   
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-bold text-gray-400 uppercase">Licensing Model</label>
+                      <select
+                        value={formRequirements.budget.licensingModel || 'User-based'}
+                        onChange={(e) => updateFormField('budget', 'licensingModel', e.target.value)}
+                        className="w-full px-3 py-2 bg-[#080c14] border border-white/5 rounded-lg text-xs text-gray-200 focus:outline-none focus:border-violet-500"
+                      >
+                        <option value="User-based">User-based (Per User)</option>
+                        <option value="Business-based">Business-based (Per App/Flow)</option>
+                        <option value="Enterprise-based">Enterprise-based (PAYG/Capacity)</option>
+                      </select>
+                    </div>
+
                     <div className="space-y-1.5">
                       <label className="text-[10px] font-bold text-gray-400 uppercase">Current M365 License Tier</label>
                       <select
@@ -2235,43 +2249,95 @@ export function ProjectDetail() {
               <p className="text-[10px] text-gray-400">Azure pricing fetches from real meters of Microsoft Retail Prices API.</p>
             </div>
             
-            {(() => {
-              const currentOptions = project?.architectureOptions || [];
-              const hasCosts = currentOptions.length > 0 && currentOptions.every(opt => !!costsCache?.[opt.id]);
-              const isCostsStale = project?.costScenariosStale === true;
-
-              let buttonText = 'Calculate Scenarios & Pricing';
-              let isDisabled = false;
-
-              if (calculatingCosts) {
-                buttonText = 'Pricing Scenarios...';
-                isDisabled = true;
-              } else if (hasCosts) {
-                if (isCostsStale) {
-                  buttonText = 'Recalculate Scenarios & Pricing';
-                  isDisabled = false;
-                } else {
-                  buttonText = 'Pricing Completed';
-                  isDisabled = true;
-                }
-              }
-
-              return (
-                <button
-                  onClick={handleCalculateCosts}
-                  disabled={isDisabled}
-                  className={`inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-lg transition-colors ${
-                    isDisabled 
-                      ? 'bg-gray-800 text-gray-500 border border-white/5 cursor-not-allowed'
-                      : 'bg-violet-600 hover:bg-violet-500 text-white'
-                  }`}
+            <div className="flex items-center gap-4 flex-wrap">
+              <div className="flex items-center gap-2 bg-black/30 border border-white/5 rounded-lg px-3 py-1.5">
+                <span className="text-[10px] uppercase tracking-wider text-gray-500 font-bold">Licensing Model:</span>
+                <select
+                  value={project?.structuredRequirements?.budget?.licensingModel || 'User-based'}
+                  onChange={async (e) => {
+                    const nextVal = e.target.value;
+                    if (!project) return;
+                    try {
+                      setCalculatingCosts(true);
+                      const updatedReqs = {
+                        ...project.structuredRequirements,
+                        budget: {
+                          ...project.structuredRequirements.budget,
+                          licensingModel: nextVal
+                        }
+                      };
+                      
+                      const saveRes = await fetch(`${API_BASE_URL}/projects/${project.id}/requirements`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ structuredRequirements: updatedReqs })
+                      });
+                      
+                      if (saveRes.ok) {
+                        const nextProj = await saveRes.json();
+                        setProject(nextProj);
+                        const pricingRes = await fetch(`${API_BASE_URL}/projects/${project.id}/cost/calculate`, {
+                          method: 'POST'
+                        });
+                        if (pricingRes.ok) {
+                          const results = await pricingRes.json();
+                          setCostsCache(results);
+                          notification.success({ message: 'Licensing Model updated & pricing calculated!' });
+                        }
+                      }
+                    } catch (error) {
+                      console.error('Failed to change licensing model:', error);
+                    } finally {
+                      setCalculatingCosts(false);
+                    }
+                  }}
+                  className="bg-transparent text-xs text-violet-400 font-bold border border-transparent focus:ring-0 cursor-pointer p-0.5 focus:outline-none"
                 >
-                  <RefreshCw className={`h-3 w-3 ${calculatingCosts ? 'animate-spin' : ''}`} />
-                  {buttonText}
-                </button>
-              );
-            })()}
+                  <option value="User-based" className="bg-[#080c14] text-gray-300">User-based (Per User)</option>
+                  <option value="Business-based" className="bg-[#080c14] text-gray-300">Business-based (Per App/Flow)</option>
+                  <option value="Enterprise-based" className="bg-[#080c14] text-gray-300">Enterprise-based (PAYG/Capacity)</option>
+                </select>
+              </div>
+
+              {(() => {
+                const currentOptions = project?.architectureOptions || [];
+                const hasCosts = currentOptions.length > 0 && currentOptions.every(opt => !!costsCache?.[opt.id]);
+                const isCostsStale = project?.costScenariosStale === true;
+
+                let buttonText = 'Calculate Scenarios & Pricing';
+                let isDisabled = false;
+
+                if (calculatingCosts) {
+                  buttonText = 'Pricing Scenarios...';
+                  isDisabled = true;
+                } else if (hasCosts) {
+                  if (isCostsStale) {
+                    buttonText = 'Recalculate Scenarios & Pricing';
+                    isDisabled = false;
+                  } else {
+                    buttonText = 'Pricing Completed';
+                    isDisabled = true;
+                  }
+                }
+
+                return (
+                  <button
+                    onClick={handleCalculateCosts}
+                    disabled={isDisabled}
+                    className={`inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-lg transition-colors ${
+                      isDisabled 
+                        ? 'bg-gray-800 text-gray-500 border border-white/5 cursor-not-allowed'
+                        : 'bg-violet-600 hover:bg-violet-500 text-white'
+                    }`}
+                  >
+                    <RefreshCw className={`h-3 w-3 ${calculatingCosts ? 'animate-spin' : ''}`} />
+                    {buttonText}
+                  </button>
+                );
+              })()}
+            </div>
           </div>
+
 
           {costsCache ? (
             <div className="space-y-6">

@@ -38,6 +38,7 @@ export class CostCalculator {
     const m365LicenseTier = project.structuredRequirements?.budget?.m365LicenseTier || 'None';
     const m365UserCount = project.structuredRequirements?.budget?.m365UserCount || project.structuredRequirements?.users?.userCount || project.expectedUsers || 1000;
     const powerAutomatePremiumAdminOnly = project.structuredRequirements?.budget?.powerAutomatePremiumAdminOnly || false;
+    const licensingModel = project.structuredRequirements?.budget?.licensingModel || 'User-based';
 
     // Parse data volume string (e.g. "500 GB" -> 500)
     const parseDataVolumeGB = (volStr?: string): number => {
@@ -87,34 +88,74 @@ export class CostCalculator {
         if (serviceNameLower.includes('power apps') || serviceNameLower.includes('powerapps')) {
           costCategory = 'Microsoft Licensing';
           sourceType = 'Microsoft Published License';
-          unitPrice = 20.0; // Power Apps Premium default
-          unit = 'User/Month';
           
-          lowQty = Math.max(1, Math.round(expectedUsers * 0.1)); // Assumed active users low scenario
-          expectedQty = expectedUsers;
-          highQty = highUsers;
+          if (licensingModel === 'Business-based') {
+            unitPrice = 5.0; // Power Apps Per App plan
+            unit = 'User/App/Month';
+            lowQty = Math.max(1, Math.round(expectedUsers * 0.1));
+            expectedQty = expectedUsers;
+            highQty = highUsers;
+            reasonSelected = `${service.reasonSelected} (Switched to Business Per App plan)`;
+          } else if (licensingModel === 'Enterprise-based') {
+            unitPrice = 10.0; // Power Apps PAYG plan (based on active monthly users)
+            unit = 'Active User/Month';
+            lowQty = Math.max(1, Math.round(expectedUsers * 0.05)); // 5% active
+            expectedQty = Math.max(1, Math.round(expectedUsers * 0.25)); // 25% active
+            highQty = Math.max(1, Math.round(highUsers * 0.4)); // 40% active
+            reasonSelected = `${service.reasonSelected} (Switched to Enterprise PAYG dynamic consumption plan)`;
+          } else {
+            unitPrice = 20.0; // Power Apps Premium default
+            unit = 'User/Month';
+            lowQty = Math.max(1, Math.round(expectedUsers * 0.1));
+            expectedQty = expectedUsers;
+            highQty = highUsers;
+          }
         } 
         else if (serviceNameLower.includes('power automate') || serviceNameLower.includes('powerautomate')) {
           costCategory = 'Microsoft Licensing';
           sourceType = 'Microsoft Published License';
-          unit = powerAutomatePremiumAdminOnly ? 'Admin User/Month' : 'User/Month';
-          unitPrice = 15.0; // Power Automate Premium default
           
-          if (powerAutomatePremiumAdminOnly) {
+          if (licensingModel === 'Business-based') {
+            unitPrice = 100.0; // Power Automate Per Flow plan
+            unit = 'Flow/Month';
             lowQty = 1;
-            expectedQty = 2; // Typically 2 admins for workflow setups
-            highQty = 5;
+            expectedQty = 2; // Assuming 2 flows for the solution
+            highQty = 4;
+            reasonSelected = `${service.reasonSelected} (Switched to Business Per Flow flat licensing)`;
+          } else if (licensingModel === 'Enterprise-based') {
+            unitPrice = 0.6; // Logic Apps Consumption/PAYG run estimate
+            unit = 'Runs/Month';
+            lowQty = lowTxns;
+            expectedQty = expectedTxns;
+            highQty = highTxns;
+            reasonSelected = `${service.reasonSelected} (Switched to Enterprise consumption execution runs)`;
           } else {
-            lowQty = Math.max(1, Math.round(expectedUsers * 0.1));
-            expectedQty = expectedUsers;
-            highQty = highUsers;
+            unit = powerAutomatePremiumAdminOnly ? 'Admin User/Month' : 'User/Month';
+            unitPrice = 15.0; // Power Automate Premium default
+            
+            if (powerAutomatePremiumAdminOnly) {
+              lowQty = 1;
+              expectedQty = 2;
+              highQty = 5;
+            } else {
+              lowQty = Math.max(1, Math.round(expectedUsers * 0.1));
+              expectedQty = expectedUsers;
+              highQty = highUsers;
+            }
           }
         }
         else if (serviceNameLower.includes('dataverse')) {
           costCategory = 'Microsoft Licensing';
           sourceType = 'Microsoft Published License';
-          unitPrice = 40.0; // Dataverse Database Capacity per GB
           unit = 'GB/Month';
+          
+          if (licensingModel === 'Business-based') {
+            unitPrice = 30.0; // Volume discount
+          } else if (licensingModel === 'Enterprise-based') {
+            unitPrice = 20.0; // Enterprise capacity reservation
+          } else {
+            unitPrice = 40.0; // Standard database capacity
+          }
           
           lowQty = Math.max(1, Math.round(dataVolumeGB * 0.5));
           expectedQty = dataVolumeGB;
