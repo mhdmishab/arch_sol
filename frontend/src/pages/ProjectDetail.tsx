@@ -2082,7 +2082,8 @@ export function ProjectDetail() {
             </div>
             
             {(() => {
-              const hasCosts = !!costsCache;
+              const currentOptions = project?.architectureOptions || [];
+              const hasCosts = currentOptions.length > 0 && currentOptions.every(opt => !!costsCache?.[opt.id]);
               const isCostsStale = project?.costScenariosStale === true;
 
               let buttonText = 'Calculate Scenarios & Pricing';
