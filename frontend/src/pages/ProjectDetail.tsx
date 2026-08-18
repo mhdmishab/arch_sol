@@ -310,6 +310,69 @@ export function ProjectDetail() {
     return groups;
   };
 
+  // Compute option recommendation/suitability percentage based on requirements and comparison metrics
+  const getOptionRecommendationPercentage = (opt: ArchitectureOption) => {
+    if (!opt || !opt.comparisonMatrix) return 0;
+    
+    const matrix = opt.comparisonMatrix;
+    const reqs = project?.structuredRequirements;
+    
+    let wSecurity = 1;
+    let wReliability = 1;
+    let wScalability = 1;
+    let wCost = 1;
+    let wComplexity = 1;
+    let wMaintainability = 1;
+
+    // Adjust weights based on user numbers
+    const userCount = project?.expectedUsers || reqs?.users?.userCount || 0;
+    if (userCount > 5000) {
+      wScalability = 2;
+      wReliability = 1.5;
+    } else if (userCount > 1000) {
+      wScalability = 1.5;
+    }
+
+    // Adjust weights based on budget boundaries
+    const monthlyBudget = reqs?.budget?.monthlyBudget || 0;
+    if (monthlyBudget > 0 && monthlyBudget < 2000) {
+      wCost = 2;
+      wComplexity = 1.5;
+    } else if (monthlyBudget >= 10000) {
+      wCost = 0.5;
+      wScalability = 2;
+      wSecurity = 1.5;
+    }
+
+    // Adjust weights based on security flags
+    if (reqs?.security?.networkIsolation || reqs?.security?.privateConnectivity || reqs?.security?.sensitiveData) {
+      wSecurity = 2.5;
+    }
+
+    const totalWeight = wSecurity + wReliability + wScalability + wCost + wComplexity + wMaintainability;
+    const weightedSum = 
+      (matrix.security * wSecurity) +
+      (matrix.reliability * wReliability) +
+      (matrix.scalability * wScalability) +
+      (matrix.cost * wCost) +
+      (matrix.complexity * wComplexity) +
+      (matrix.maintainability * wMaintainability);
+
+    let score = (weightedSum / (totalWeight * 5)) * 100;
+
+    // Contextual alignment bonuses
+    const nameLower = opt.name.toLowerCase();
+    const cloudPref = project?.cloudPreference?.toLowerCase() || '';
+
+    if (cloudPref.includes('saas') || cloudPref.includes('power') || cloudPref.includes('low')) {
+      if (nameLower.includes('saas') || nameLower.includes('power platform')) score += 8;
+    } else if (cloudPref.includes('azure') || cloudPref.includes('paas') || cloudPref.includes('custom')) {
+      if (nameLower.includes('paas') || nameLower.includes('app service') || nameLower.includes('hybrid')) score += 8;
+    }
+
+    return Math.min(98, Math.max(40, Math.round(score)));
+  };
+
   // Interactive Teach Me state
   const [expandedTeachMe, setExpandedTeachMe] = useState<Record<string, boolean>>({});
 
@@ -1936,20 +1999,34 @@ export function ProjectDetail() {
                         {group.date.toLocaleString()}
                       </span>
                     </span>
-                    {group.options.map((opt) => (
-                      <button
-                        key={opt.id}
-                        onClick={() => handleSelectOptionView(opt.id)}
-                        className={`w-full text-left p-3.5 rounded-xl border transition-all duration-200 ${
-                          selectedOptionView === opt.id
-                            ? 'bg-violet-600/10 border-violet-500/30 text-violet-400 shadow-lg'
-                            : 'bg-[#0d1321]/30 border-white/5 hover:border-white/10 text-gray-400 hover:text-gray-200'
-                        }`}
-                      >
-                        <span className="text-xs font-bold block mb-1">{opt.name}</span>
-                        <span className="text-[10px] text-gray-500 block">Complexity: {opt.complexity} | Migration: {opt.migrationEffort}</span>
-                      </button>
-                    ))}
+                    {group.options.map((opt) => {
+                      const matchPct = getOptionRecommendationPercentage(opt);
+                      return (
+                        <button
+                          key={opt.id}
+                          onClick={() => handleSelectOptionView(opt.id)}
+                          className={`w-full text-left p-3.5 rounded-xl border transition-all duration-200 ${
+                            selectedOptionView === opt.id
+                              ? 'bg-violet-600/10 border-violet-500/30 text-violet-400 shadow-lg'
+                              : 'bg-[#0d1321]/30 border-white/5 hover:border-white/10 text-gray-400 hover:text-gray-200'
+                          }`}
+                        >
+                          <div className="flex justify-between items-start mb-1 gap-2">
+                            <span className="text-xs font-bold block">{opt.name}</span>
+                            <span className={`text-[9px] px-1.5 py-0.5 rounded font-extrabold shrink-0 ${
+                              matchPct >= 80
+                                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                                : matchPct >= 65
+                                  ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                                  : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+                            }`}>
+                              {matchPct}% Match
+                            </span>
+                          </div>
+                          <span className="text-[10px] text-gray-500 block">Complexity: {opt.complexity} | Migration: {opt.migrationEffort}</span>
+                        </button>
+                      );
+                    })}
                   </div>
                 ))}
 
@@ -1970,7 +2047,33 @@ export function ProjectDetail() {
                 <div className="lg:col-span-3 space-y-6">
                   {/* Option Title & Description */}
                   <div className="p-6 rounded-xl bg-[#0d1321]/50 border border-white/5 space-y-4">
-                    <h3 className="text-lg font-bold text-gray-200">{currentOptionData.name}</h3>
+                    <div className="flex flex-wrap items-center justify-between gap-4">
+                      <h3 className="text-lg font-bold text-gray-200">{currentOptionData.name}</h3>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Suitability Match:</span>
+                        <span className={`text-base font-extrabold ${
+                          getOptionRecommendationPercentage(currentOptionData) >= 80 
+                            ? 'text-emerald-400' 
+                            : getOptionRecommendationPercentage(currentOptionData) >= 65 
+                              ? 'text-amber-400' 
+                              : 'text-rose-400'
+                        }`}>
+                          {getOptionRecommendationPercentage(currentOptionData)}%
+                        </span>
+                      </div>
+                    </div>
+                    <div className="w-full bg-white/5 h-1.5 rounded-full overflow-hidden">
+                      <div 
+                        className={`h-full rounded-full transition-all duration-500 ${
+                          getOptionRecommendationPercentage(currentOptionData) >= 80 
+                            ? 'bg-emerald-500' 
+                            : getOptionRecommendationPercentage(currentOptionData) >= 65 
+                              ? 'bg-amber-500' 
+                              : 'bg-rose-500'
+                        }`}
+                        style={{ width: `${getOptionRecommendationPercentage(currentOptionData)}%` }}
+                      ></div>
+                    </div>
                     <p className="text-xs text-gray-400 leading-relaxed">{currentOptionData.description}</p>
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">

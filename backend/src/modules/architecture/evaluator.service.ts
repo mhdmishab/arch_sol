@@ -102,9 +102,11 @@ Instructions:
       const review = JSON.parse(response.text) as CriticReview;
       console.log(`🛡️ Parsed audit containing ${review.findings?.length || 0} findings and ${review.managedIdentityOpportunities?.length || 0} MI paths.`);
       return review;
-    } catch (err) {
+    } catch (err: any) {
       console.warn('Critic API failed:', err);
-      return { findings: [], managedIdentityOpportunities: [] };
+      const error: any = new Error(err.message || 'Critic API failed');
+      error.status = err.status || err.statusCode || (err.message?.includes('503') ? 503 : 500);
+      throw error;
     }
   }
 
@@ -294,18 +296,11 @@ Instructions:
       const waf = JSON.parse(response.text) as WAFReview;
       console.log(`⭐️ WAF review parsed. Scores: SEC: ${waf.scores?.security}, REL: ${waf.scores?.reliability}, COST: ${waf.scores?.costOptimization}, OPS: ${waf.scores?.operationalExcellence}, PERF: ${waf.scores?.performanceEfficiency}`);
       return waf;
-    } catch (err) {
+    } catch (err: any) {
       console.warn('WAF API failed:', err);
-      return {
-        scores: { security: 0, reliability: 0, costOptimization: 0, operationalExcellence: 0, performanceEfficiency: 0 },
-        pillars: {
-          security: { strengths: [], gaps: [] },
-          reliability: { strengths: [], gaps: [] },
-          costOptimization: { strengths: [], gaps: [] },
-          operationalExcellence: { strengths: [], gaps: [] },
-          performanceEfficiency: { strengths: [], gaps: [] }
-        }
-      };
+      const error: any = new Error(err.message || 'WAF API failed');
+      error.status = err.status || err.statusCode || (err.message?.includes('503') ? 503 : 500);
+      throw error;
     }
   }
 
@@ -393,9 +388,11 @@ Instructions:
       const parsed = JSON.parse(response.text);
       console.log(`📋 Successfully generated ${parsed.decisions?.length || 0} architecture decision logs.`);
       return parsed.decisions as ADR[];
-    } catch (err) {
+    } catch (err: any) {
       console.warn('ADR API failed:', err);
-      return [];
+      const error: any = new Error(err.message || 'ADR API failed');
+      error.status = err.status || err.statusCode || (err.message?.includes('503') ? 503 : 500);
+      throw error;
     }
   }
 
