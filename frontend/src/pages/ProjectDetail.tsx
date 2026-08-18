@@ -2259,7 +2259,7 @@ export function ProjectDetail() {
         <div className="space-y-6">
           {(() => {
             const activeOption = project?.architectureOptions?.find(opt => opt.id === selectedOptionView);
-            const activeCritic = activeOption?.criticReview || project?.criticReview;
+            const activeCritic = activeOption?.criticReview;
             const isCriticStale = activeCritic?.isStale === true;
 
             if (isCriticStale) {
@@ -2289,7 +2289,7 @@ export function ProjectDetail() {
             
             {(() => {
               const activeOption = project?.architectureOptions?.find(opt => opt.id === selectedOptionView);
-              const activeCritic = activeOption?.criticReview || project?.criticReview;
+              const activeCritic = activeOption?.criticReview;
               const hasCritic = !!activeCritic;
               const isCriticStale = activeCritic?.isStale === true;
 
@@ -2327,7 +2327,7 @@ export function ProjectDetail() {
 
           {(() => {
             const activeOption = project?.architectureOptions?.find(opt => opt.id === selectedOptionView);
-            const activeCritic = activeOption?.criticReview || project?.criticReview;
+            const activeCritic = activeOption?.criticReview;
 
             return activeCritic ? (
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -2436,7 +2436,7 @@ export function ProjectDetail() {
         <div className="space-y-6">
           {(() => {
             const activeOption = project?.architectureOptions?.find(opt => opt.id === selectedOptionView);
-            const activeWAF = activeOption?.wellArchitectedReview || project?.wellArchitectedReview;
+            const activeWAF = activeOption?.wellArchitectedReview;
             const isWAFStale = activeWAF?.isStale === true;
 
             if (isWAFStale) {
@@ -2466,7 +2466,7 @@ export function ProjectDetail() {
             
             {(() => {
               const activeOption = project?.architectureOptions?.find(opt => opt.id === selectedOptionView);
-              const activeWAF = activeOption?.wellArchitectedReview || project?.wellArchitectedReview;
+              const activeWAF = activeOption?.wellArchitectedReview;
               const hasWAF = !!activeWAF;
               const isWAFStale = activeWAF?.isStale === true;
 
@@ -2504,7 +2504,7 @@ export function ProjectDetail() {
 
           {(() => {
             const activeOption = project?.architectureOptions?.find(opt => opt.id === selectedOptionView);
-            const activeWAF = activeOption?.wellArchitectedReview || project?.wellArchitectedReview;
+            const activeWAF = activeOption?.wellArchitectedReview;
 
             return activeWAF ? (
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -2633,7 +2633,7 @@ export function ProjectDetail() {
               d => (d.affectedOptionId || 'option-a') === activeOptionId
             );
             const activeOption = project?.architectureOptions?.find(opt => opt.id === activeOptionId);
-            const activeCritic = activeOption?.criticReview || project?.criticReview;
+            const activeCritic = activeOption?.criticReview;
             const isStale = activeCritic?.isStale === true;
 
             if (isStale && optionDecisions.length > 0) {
@@ -2668,7 +2668,7 @@ export function ProjectDetail() {
               );
               
               const activeOption = project?.architectureOptions?.find(opt => opt.id === activeOptionId);
-              const activeCritic = activeOption?.criticReview || project?.criticReview;
+              const activeCritic = activeOption?.criticReview;
               const isStale = activeCritic?.isStale === true;
 
               let buttonText = 'Generate Decision Log';

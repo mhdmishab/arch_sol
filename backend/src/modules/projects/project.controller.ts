@@ -502,7 +502,12 @@ export async function generateProjectADRs(req: Request, res: Response, next: Nex
     const evaluator = new EvaluatorService();
     const decisions = await evaluator.generateADRs(project);
 
-    const updated = await ProjectRepository.update(id, { decisions });
+    // Keep decisions from other options, and merge/overwrite the ones for the selectedOptionId
+    const selectedOptionId = project.selectedOptionId || 'option-a';
+    const otherOptionDecisions = (project.decisions || []).filter(d => d.affectedOptionId !== selectedOptionId);
+    const updatedDecisions = [...otherOptionDecisions, ...decisions];
+
+    const updated = await ProjectRepository.update(id, { decisions: updatedDecisions });
     res.json(updated);
   } catch (error) {
     next(error);
