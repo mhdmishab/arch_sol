@@ -1,6 +1,7 @@
 import { GoogleGenAI } from '@google/genai';
 import { ArchitectureProject, ArchitectureOption } from '../projects/project.model.js';
 import dotenv from 'dotenv';
+import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
 
@@ -194,7 +195,7 @@ ${JSON.stringify(project.structuredRequirements, null, 2)}`;
 
     const options: ArchitectureOption[] = [
       {
-        id: 'option-a',
+        id: `arch-opt-${crypto.randomUUID()}`,
         name: 'Remain on Microsoft SaaS / Power Platform',
         description: 'Leverage the existing SharePoint lists and Power Automate flow, wrapped in a customized canvas Power App. Keeps the workload fully contained within the low-code SaaS workspace.',
         benefits: [
@@ -279,8 +280,8 @@ ${JSON.stringify(project.structuredRequirements, null, 2)}`;
         }
       },
       {
-        id: 'option-b',
-        name: 'Hybrid Architecture (Power Platform + Azure API)',
+        id: `arch-opt-${crypto.randomUUID()}`,
+        name: 'Hybrid Architecture (Integration & API Management)',
         description: 'Keeps low-code frontends (Power Apps canvas app or SharePoint pages) for business users, but routes backend processes and SAP transaction handshakes through an Azure API Management gateway and serverless API.',
         benefits: [
           'Preserves user experience and training inside SharePoint/Office ecosystem.',
@@ -380,8 +381,8 @@ ${JSON.stringify(project.structuredRequirements, null, 2)}`;
         }
       },
       {
-        id: 'option-c',
-        name: 'Azure-First PaaS / Dedicated Architecture',
+        id: `arch-opt-${crypto.randomUUID()}`,
+        name: 'Cloud Native PaaS (Azure App Service & Database)',
         description: 'Complete custom cloud build. Renders a React SPA frontend hosted on static Web Apps, authenticating via Microsoft Entra ID. Business logic runs entirely in APIM and App Services, storing data in Azure SQL Database.',
         benefits: [
           'Maximum performance, microsecond latencies, and unlimited scalability.',

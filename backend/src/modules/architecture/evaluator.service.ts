@@ -406,9 +406,11 @@ Instructions:
     const managedIdentityOpportunities: CriticReview['managedIdentityOpportunities'] = [];
 
     const selectedOptionId = project.selectedOptionId || 'option-a';
+    const selectedOption = project.architectureOptions?.find(opt => opt.id === selectedOptionId) || project.architectureOptions?.[0];
+    const isSaaS = selectedOption?.name?.toLowerCase().includes('saas') || selectedOption?.name?.toLowerCase().includes('power platform') || selectedOptionId === 'option-a';
 
     // 1. Unrestricted Public Network Exposure (Critical) - Only applies if not Option A
-    if (selectedOptionId !== 'option-a' && !reqs.security?.networkIsolation && !reqs.security?.privateConnectivity) {
+    if (!isSaaS && !reqs.security?.networkIsolation && !reqs.security?.privateConnectivity) {
       findings.push({
         severity: 'Critical',
         title: 'Unrestricted Public Network Exposure',
@@ -448,7 +450,7 @@ Instructions:
         title: 'Workload Surge Throttling Under Peak Volumes',
         description: `With transactions estimated at ${transactions} per month, synchronous integration runs will face throttling limits and rate locks if traffic spikes suddenly.`,
         recommendation: 'Decouple transaction handshakes by placing an asynchronous message broker (like Azure Service Bus) in front of the target ERP processing services.',
-        affectedComponent: selectedOptionId === 'option-a' ? 'Power Automate Flows' : 'API Management',
+        affectedComponent: isSaaS ? 'Power Automate Flows' : 'API Management',
         evidence: `Estimated monthly transactions count: ${transactions}`,
         whyItApplies: 'Applies to integration paths that handle heavy transaction workloads without asynchronous buffers.',
         missingInformation: 'Peak TPS rates and SAP API rate limits.',
@@ -464,7 +466,7 @@ Instructions:
         title: 'Default Data-at-Rest Encryption Risk',
         description: 'Sensitive business files are stored without explicit customer-managed key (CMK) encryption parameters, relying on standard platform defaults.',
         recommendation: 'Configure Azure Key Vault to store encryption keys and enforce Transparent Data Encryption (TDE) on database instances.',
-        affectedComponent: selectedOptionId === 'option-a' ? 'Dataverse' : 'Azure SQL Database',
+        affectedComponent: isSaaS ? 'Dataverse' : 'Azure SQL Database',
         evidence: 'Encryption strategy parameter is empty.',
         whyItApplies: 'Applies to the core storage and databases where files or transactions are stored.',
         missingInformation: 'Corporate compliance encryption policy details.',
@@ -490,7 +492,7 @@ Instructions:
     }
 
     // --- Managed Identity Opportunities ---
-    if (selectedOptionId !== 'option-a') {
+    if (!isSaaS) {
       if (reqs.data?.relationalData || reqs.data?.noSqlData) {
         managedIdentityOpportunities.push({
           sourceService: 'Azure Functions / App Service',
@@ -533,6 +535,10 @@ Instructions:
     console.log('⚡ Generating dynamic mock WAF Review...');
     const reqs = project.structuredRequirements;
     const selectedOptionId = project.selectedOptionId || 'option-a';
+    const selectedOption = project.architectureOptions?.find(opt => opt.id === selectedOptionId) || project.architectureOptions?.[0];
+    const isSaaS = selectedOption?.name?.toLowerCase().includes('saas') || selectedOption?.name?.toLowerCase().includes('power platform') || selectedOptionId === 'option-a';
+    const isHybrid = selectedOption?.name?.toLowerCase().includes('hybrid') || selectedOptionId === 'option-b';
+    const isPaaS = selectedOption?.name?.toLowerCase().includes('paas') || selectedOption?.name?.toLowerCase().includes('app service') || selectedOptionId === 'option-c';
 
     const buildMockPillar = (
       strengths: string[],
@@ -553,7 +559,7 @@ Instructions:
       securityGaps.push({
         title: 'Centralized SSO Authentication Gap',
         severity: 'High',
-        affectedComponent: selectedOptionId === 'option-a' ? 'Power Apps' : 'App Service',
+        affectedComponent: isSaaS ? 'Power Apps' : 'App Service',
         whyItApplies: 'Required to govern user access and ensure least-privilege directory control.',
         evidence: 'No centralized identity provider configured.',
         recommendation: 'Configure Microsoft Entra ID integration.',
@@ -562,7 +568,7 @@ Instructions:
     }
 
     // Reliability Gaps
-    if (selectedOptionId === 'option-a') {
+    if (isSaaS) {
       reliabilityGaps.push({
         title: 'Downstream SAP Availability SLA Dependency',
         severity: 'Medium',
@@ -603,10 +609,10 @@ Instructions:
       opsGaps.push({
         title: 'Manual Deployment Strategy',
         severity: 'Medium',
-        affectedComponent: selectedOptionId === 'option-a' ? 'Power Platform Solutions' : 'Infrastructure Resources',
+        affectedComponent: isSaaS ? 'Power Platform Solutions' : 'Infrastructure Resources',
         whyItApplies: 'Manual release models increase deployment drift risks.',
         evidence: `Deployment model: "${deployModel || 'Manual'}"`,
-        recommendation: selectedOptionId === 'option-a' ? 'Establish ALM pipelines.' : 'Enforce Infrastructure as Code using Bicep or Terraform.',
+        recommendation: isSaaS ? 'Establish ALM pipelines.' : 'Enforce Infrastructure as Code using Bicep or Terraform.',
         confidence: 'High'
       });
     }
@@ -617,7 +623,7 @@ Instructions:
       perfGaps.push({
         title: 'Sync Integration Throughput Constraints',
         severity: 'Medium',
-        affectedComponent: selectedOptionId === 'option-a' ? 'Power Automate Flows' : 'Azure SQL Database',
+        affectedComponent: isSaaS ? 'Power Automate Flows' : 'Azure SQL Database',
         whyItApplies: 'High workload volumes require validating connection pool sizing and request throttling thresholds.',
         evidence: `Workload volume: ${txns} monthly transactions`,
         recommendation: 'Perform load test validations and benchmark downstream rate limits.',
@@ -665,9 +671,14 @@ Instructions:
     const region = project.region || 'Central India';
     const transactions = reqs.workload?.transactionsPerMonth || 0;
 
+    const selectedOption = project.architectureOptions?.find(opt => opt.id === selectedOptionId) || project.architectureOptions?.[0];
+    const isSaaS = selectedOption?.name?.toLowerCase().includes('saas') || selectedOption?.name?.toLowerCase().includes('power platform') || selectedOptionId === 'option-a';
+    const isHybrid = selectedOption?.name?.toLowerCase().includes('hybrid') || selectedOptionId === 'option-b';
+    const isPaaS = selectedOption?.name?.toLowerCase().includes('paas') || selectedOption?.name?.toLowerCase().includes('app service') || selectedOptionId === 'option-c';
+
     const result: ADR[] = [];
 
-    if (selectedOptionId === 'option-a') {
+    if (isSaaS) {
       result.push({
         id: 'adr-001',
         title: 'Use Microsoft Dataverse instead of SharePoint Lists for structured configuration data',
@@ -682,7 +693,7 @@ Instructions:
           reliability: 'Fully managed Microsoft SLA; avoids custom indexing database administration overhead.'
         },
         consequences: 'Tenant capacity limits must be monitored regularly in the Power Platform Admin Center.',
-        affectedOptionId: 'option-a',
+        affectedOptionId: selectedOptionId,
         whyItApplies: 'Dataverse is the target data layer for the Microsoft SaaS option.',
         confidence: 90,
         decisionDriver: 'Complex configuration table relationships',
@@ -704,7 +715,7 @@ Instructions:
           reliability: 'Flow failures can trigger automatic email alerts; retries use exponential backoff.'
         },
         consequences: 'We must validate SAP API rate limits to prevent connector rate limits throttling.',
-        affectedOptionId: 'option-a',
+        affectedOptionId: selectedOptionId,
         whyItApplies: 'Option A relies solely on Power Automate flow orchestrations.',
         confidence: 85,
         decisionDriver: 'Approval workflows and integration boundaries',
@@ -726,14 +737,14 @@ Instructions:
           reliability: 'Enterprise-grade identity uptime SLA.'
         },
         consequences: 'Requires administrators to register connection references using corporate accounts.',
-        affectedOptionId: 'option-a',
+        affectedOptionId: selectedOptionId,
         whyItApplies: 'Identity provider mapping is shared across all options.',
         confidence: 95,
         decisionDriver: 'Corporate single sign-on security mandates',
         alternative: 'Custom credential databases',
         reasonRejected: 'Introducing custom password storage violates corporate security compliance regulations.'
       });
-    } else if (selectedOptionId === 'option-b') {
+    } else if (isHybrid) {
       result.push({
         id: 'adr-001',
         title: 'Use Azure API Management (APIM) as a gateway to external legacy SAP ERP services',
@@ -748,7 +759,7 @@ Instructions:
           reliability: 'Shields downstream ERP systems from unexpected frontend request spikes.'
         },
         consequences: 'Requires updating custom connector definitions whenever back-end API schemas change.',
-        affectedOptionId: 'option-b',
+        affectedOptionId: selectedOptionId,
         whyItApplies: 'Option B utilizes API Management to bridge Low-Code with Azure services.',
         confidence: 88,
         decisionDriver: 'SAP backend security and telemetry isolation',
@@ -770,7 +781,7 @@ Instructions:
           reliability: 'Guarantees queue durability during SAP offline updates or maintenance.'
         },
         consequences: 'Enforces asynchronous transaction status checking in the frontend UI.',
-        affectedOptionId: 'option-b',
+        affectedOptionId: selectedOptionId,
         whyItApplies: 'Option B leverages Service Bus for asynchronous enterprise messaging.',
         confidence: 90,
         decisionDriver: 'High-throughput transactional survivability',
@@ -793,7 +804,7 @@ Instructions:
           reliability: '99.99% database SLA with automated daily point-in-time recovery (PITR) backups.'
         },
         consequences: 'Requires team developers to manage schema migrations manually using Entity Framework or Flyway.',
-        affectedOptionId: 'option-c',
+        affectedOptionId: selectedOptionId,
         whyItApplies: 'Option C is an Azure-first custom code architecture using SQL.',
         confidence: 92,
         decisionDriver: 'Custom database administration controls',
@@ -815,7 +826,7 @@ Instructions:
           reliability: 'Distributed globally via Edge caching CDNs.'
         },
         consequences: 'Increases initial implementation cycles and team frontend maintenance effort.',
-        affectedOptionId: 'option-c',
+        affectedOptionId: selectedOptionId,
         whyItApplies: 'Option C is a custom-developed web application.',
         confidence: 85,
         decisionDriver: 'Advanced charting and performance customizations',

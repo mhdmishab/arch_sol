@@ -146,6 +146,8 @@ export interface ArchitectureOption {
   };
   wellArchitectedReview?: WAFReview;
   criticReview?: CriticReview;
+  decisions?: ADR[];
+  createdAt?: Date;
 }
 
 export interface WAFGap {
@@ -507,6 +509,28 @@ const CriticReviewSchema = new Schema<CriticReview>({
   isStale: { type: Boolean, default: false }
 }, { _id: false });
 
+const ADRSchema = new Schema<ADR>({
+  id: { type: String, required: true },
+  title: { type: String, required: true },
+  status: { type: String, enum: ['Proposed', 'Accepted', 'Rejected'], default: 'Proposed' },
+  context: { type: String, required: true },
+  decision: { type: String, required: true },
+  alternatives: { type: [String], default: [] },
+  reasons: { type: [String], default: [] },
+  impacts: {
+    security: String,
+    cost: String,
+    reliability: String
+  },
+  consequences: { type: String, required: true },
+  affectedOptionId: { type: String },
+  whyItApplies: { type: String },
+  confidence: { type: Number },
+  decisionDriver: { type: String },
+  alternative: { type: String },
+  reasonRejected: { type: String }
+});
+
 const ArchitectureOptionSchema = new Schema<ArchitectureOption>({
   id: { type: String, required: true },
   name: { type: String, required: true },
@@ -537,30 +561,10 @@ const ArchitectureOptionSchema = new Schema<ArchitectureOption>({
     explanations: { type: Map, of: String, default: {} }
   },
   wellArchitectedReview: { type: WAFReviewSchema },
-  criticReview: { type: CriticReviewSchema }
+  criticReview: { type: CriticReviewSchema },
+  decisions: { type: [ADRSchema], default: [] },
+  createdAt: { type: Date, default: Date.now }
 }, { _id: false });
-
-const ADRSchema = new Schema<ADR>({
-  id: { type: String, required: true },
-  title: { type: String, required: true },
-  status: { type: String, enum: ['Proposed', 'Accepted', 'Rejected'], default: 'Proposed' },
-  context: { type: String, required: true },
-  decision: { type: String, required: true },
-  alternatives: { type: [String], default: [] },
-  reasons: { type: [String], default: [] },
-  impacts: {
-    security: String,
-    cost: String,
-    reliability: String
-  },
-  consequences: { type: String, required: true },
-  affectedOptionId: { type: String },
-  whyItApplies: { type: String },
-  confidence: { type: Number },
-  decisionDriver: { type: String },
-  alternative: { type: String },
-  reasonRejected: { type: String }
-});
 
 const ProjectSchema = new Schema<IArchitectureProjectDoc>({
   name: { type: String, required: true },

@@ -5,6 +5,30 @@ import { OptionService } from '../architecture/option.service.js';
 import { CostCalculator } from '../cost/cost.calculator.js';
 import { EvaluatorService } from '../architecture/evaluator.service.js';
 
+function areProjectParametersEqual(oldProj: any, newProj: any): boolean {
+  if (!oldProj || !newProj) return false;
+  if (oldProj.expectedUsers !== newProj.expectedUsers) return false;
+  if (oldProj.region !== newProj.region) return false;
+  if (oldProj.industry !== newProj.industry) return false;
+  if (oldProj.cloudPreference !== newProj.cloudPreference) return false;
+
+  const reqsA = oldProj.structuredRequirements || {};
+  const reqsB = newProj.structuredRequirements || {};
+  
+  const sections = ['business', 'users', 'workload', 'availability', 'security', 'integration', 'data', 'budget', 'development'];
+  for (const section of sections) {
+    const secA = reqsA[section] || {};
+    const secB = reqsB[section] || {};
+    const keys = Array.from(new Set([...Object.keys(secA), ...Object.keys(secB)]));
+    for (const key of keys) {
+      if (secA[key] !== secB[key]) {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
 export function calculateDeterministicConfidence(reqs: StructuredRequirements): ConfidenceScore {
   let totalFields = 0;
   let populatedFields = 0;
@@ -230,6 +254,54 @@ export async function analyzeRequirements(req: Request, res: Response, next: Nex
     });
 
     const analyzedUserCount = analysisResult.structuredRequirements?.users?.userCount;
+    const newExpectedUsers = typeof analyzedUserCount === 'number' ? analyzedUserCount : project.expectedUsers;
+    const newStructuredReqs = analysisResult.structuredRequirements || project.structuredRequirements;
+
+    const oldProjParams = {
+      expectedUsers: project.expectedUsers,
+      region: project.region,
+      industry: project.industry,
+      cloudPreference: project.cloudPreference,
+      structuredRequirements: project.structuredRequirements
+    };
+    const newProjParams = {
+      expectedUsers: newExpectedUsers,
+      region: project.region,
+      industry: project.industry,
+      cloudPreference: project.cloudPreference,
+      structuredRequirements: newStructuredReqs
+    };
+    const hasParamsChanged = !areProjectParametersEqual(oldProjParams, newProjParams);
+
+    let architectureOptions = project.architectureOptions || [];
+    let rootCritic = project.criticReview;
+    let rootWAF = project.wellArchitectedReview;
+    let costScenariosStale = project.costScenariosStale || false;
+
+    if (hasParamsChanged) {
+      costScenariosStale = true;
+      if (architectureOptions.length > 0) {
+        architectureOptions = architectureOptions.map(opt => {
+          const updatedOpt = { ...opt };
+          if (updatedOpt.criticReview) {
+            updatedOpt.criticReview = { ...updatedOpt.criticReview, isStale: true };
+          }
+          if (updatedOpt.wellArchitectedReview) {
+            updatedOpt.wellArchitectedReview = { ...updatedOpt.wellArchitectedReview, isStale: true };
+          }
+          if (updatedOpt.decisions && updatedOpt.decisions.length > 0) {
+            updatedOpt.decisions = updatedOpt.decisions.map(d => ({ ...d, isStale: true }));
+          }
+          return updatedOpt;
+        });
+      }
+      if (rootCritic) {
+        rootCritic = { ...rootCritic, isStale: true };
+      }
+      if (rootWAF) {
+        rootWAF = { ...rootWAF, isStale: true };
+      }
+    }
 
     const updatedProject = await ProjectRepository.update(id, {
       requirements: analysisResult.requirements.map((r: any, i: number) => ({
@@ -240,11 +312,15 @@ export async function analyzeRequirements(req: Request, res: Response, next: Nex
         source: 'extracted'
       })),
       missingRequirements: analysisResult.missingRequirements,
-      structuredRequirements: analysisResult.structuredRequirements || project.structuredRequirements,
-      expectedUsers: typeof analyzedUserCount === 'number' ? analyzedUserCount : project.expectedUsers,
+      structuredRequirements: newStructuredReqs,
+      expectedUsers: newExpectedUsers,
       confidenceScore: analysisResult.structuredRequirements
         ? calculateDeterministicConfidence(analysisResult.structuredRequirements)
-        : analysisResult.confidenceScore
+        : analysisResult.confidenceScore,
+      architectureOptions,
+      criticReview: rootCritic,
+      wellArchitectedReview: rootWAF,
+      costScenariosStale
     });
 
     res.json(updatedProject);
@@ -315,21 +391,51 @@ export async function updateStructuredRequirements(req: Request, res: Response, 
     updatedMissing = updatedMissing.filter(mr => !isFieldPopulated(mr.field, structuredRequirements));
 
     // Mark reviews as stale when requirements change
+    const oldProjParams = {
+      expectedUsers: project.expectedUsers,
+      region: project.region,
+      industry: project.industry,
+      cloudPreference: project.cloudPreference,
+      structuredRequirements: project.structuredRequirements
+    };
+    const newProjParams = {
+      expectedUsers: expectedUsers,
+      region: project.region,
+      industry: project.industry,
+      cloudPreference: project.cloudPreference,
+      structuredRequirements: structuredRequirements
+    };
+    const hasParamsChanged = !areProjectParametersEqual(oldProjParams, newProjParams);
+
     let architectureOptions = project.architectureOptions || [];
-    if (architectureOptions.length > 0) {
-      architectureOptions = architectureOptions.map(opt => {
-        const updatedOpt = { ...opt };
-        if (updatedOpt.criticReview) {
-          updatedOpt.criticReview = { ...updatedOpt.criticReview, isStale: true };
-        }
-        if (updatedOpt.wellArchitectedReview) {
-          updatedOpt.wellArchitectedReview = { ...updatedOpt.wellArchitectedReview, isStale: true };
-        }
-        return updatedOpt;
-      });
+    let rootCritic = project.criticReview;
+    let rootWAF = project.wellArchitectedReview;
+    let costScenariosStale = project.costScenariosStale || false;
+
+    if (hasParamsChanged) {
+      costScenariosStale = true;
+      if (architectureOptions.length > 0) {
+        architectureOptions = architectureOptions.map(opt => {
+          const updatedOpt = { ...opt };
+          if (updatedOpt.criticReview) {
+            updatedOpt.criticReview = { ...updatedOpt.criticReview, isStale: true };
+          }
+          if (updatedOpt.wellArchitectedReview) {
+            updatedOpt.wellArchitectedReview = { ...updatedOpt.wellArchitectedReview, isStale: true };
+          }
+          if (updatedOpt.decisions && updatedOpt.decisions.length > 0) {
+            updatedOpt.decisions = updatedOpt.decisions.map(d => ({ ...d, isStale: true }));
+          }
+          return updatedOpt;
+        });
+      }
+      if (rootCritic) {
+        rootCritic = { ...rootCritic, isStale: true };
+      }
+      if (rootWAF) {
+        rootWAF = { ...rootWAF, isStale: true };
+      }
     }
-    const rootCritic = project.criticReview ? { ...project.criticReview, isStale: true } : undefined;
-    const rootWAF = project.wellArchitectedReview ? { ...project.wellArchitectedReview, isStale: true } : undefined;
 
     const updated = await ProjectRepository.update(id, {
       structuredRequirements,
@@ -339,7 +445,7 @@ export async function updateStructuredRequirements(req: Request, res: Response, 
       architectureOptions,
       criticReview: rootCritic,
       wellArchitectedReview: rootWAF,
-      costScenariosStale: true
+      costScenariosStale
     });
 
     res.json(updated);
@@ -362,10 +468,52 @@ export async function generateArchitectureOptions(req: Request, res: Response, n
     const optionService = new OptionService();
     const options = await optionService.generateOptions(project);
 
-    // Save generated options
+    // Find the latest old options of each type to map/copy existing reviews
+    const oldOptions = project.architectureOptions || [];
+    
+    const findLatestOldOption = (nameSnippet: string) => {
+      const filtered = oldOptions.filter(o => o.name.toLowerCase().includes(nameSnippet));
+      if (filtered.length === 0) return null;
+      return filtered.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())[0];
+    };
+
+    const latestOldSaaS = findLatestOldOption('saas') || findLatestOldOption('power platform');
+    const latestOldHybrid = findLatestOldOption('hybrid');
+    const latestOldPaaS = findLatestOldOption('paas') || findLatestOldOption('app service');
+
+    const optionsWithPreservedReviews = options.map(newOpt => {
+      let matchedOldOpt: any = null;
+      const nameLower = newOpt.name.toLowerCase();
+      if (nameLower.includes('saas') || nameLower.includes('power platform')) {
+        matchedOldOpt = latestOldSaaS;
+      } else if (nameLower.includes('hybrid')) {
+        matchedOldOpt = latestOldHybrid;
+      } else if (nameLower.includes('paas') || nameLower.includes('app service')) {
+        matchedOldOpt = latestOldPaaS;
+      }
+
+      if (matchedOldOpt) {
+        return {
+          ...newOpt,
+          createdAt: new Date(),
+          wellArchitectedReview: matchedOldOpt.wellArchitectedReview,
+          criticReview: matchedOldOpt.criticReview,
+          decisions: matchedOldOpt.decisions
+        };
+      }
+
+      return {
+        ...newOpt,
+        createdAt: new Date()
+      };
+    });
+
+    const updatedOptions = [...oldOptions, ...optionsWithPreservedReviews];
+
+    // Save generated options and default select the first of the newly generated options
     const updated = await ProjectRepository.update(id, {
-      architectureOptions: options,
-      selectedOptionId: options[1]?.id || options[0]?.id // Default select Option B or A
+      architectureOptions: updatedOptions,
+      selectedOptionId: optionsWithPreservedReviews[0]?.id
     });
 
     res.json(updated);
@@ -502,12 +650,20 @@ export async function generateProjectADRs(req: Request, res: Response, next: Nex
     const evaluator = new EvaluatorService();
     const decisions = await evaluator.generateADRs(project);
 
-    // Keep decisions from other options, and merge/overwrite the ones for the selectedOptionId
     const selectedOptionId = project.selectedOptionId || 'option-a';
-    const otherOptionDecisions = (project.decisions || []).filter(d => d.affectedOptionId !== selectedOptionId);
-    const updatedDecisions = [...otherOptionDecisions, ...decisions];
+    const optIndex = (project.architectureOptions || []).findIndex(opt => opt.id === selectedOptionId);
 
-    const updated = await ProjectRepository.update(id, { decisions: updatedDecisions });
+    const updates: any = {};
+    if (optIndex !== -1) {
+      project.architectureOptions[optIndex].decisions = decisions;
+      updates.architectureOptions = project.architectureOptions;
+    }
+
+    // Keep project-level decisions for backward compatibility (merged across options)
+    const otherOptionDecisions = (project.decisions || []).filter(d => d.affectedOptionId !== selectedOptionId);
+    updates.decisions = [...otherOptionDecisions, ...decisions];
+
+    const updated = await ProjectRepository.update(id, updates);
     res.json(updated);
   } catch (error) {
     next(error);
@@ -525,17 +681,37 @@ export async function updateADRStatus(req: Request, res: Response, next: NextFun
       return;
     }
 
+    // 1. Update project-level decisions
     const decisions = project.decisions || [];
     const adrIndex = decisions.findIndex((d) => d.id === adrId);
-    if (adrIndex === -1) {
-      res.status(404).json({ error: `ADR with ID ${adrId} not found.` });
-      return;
+    if (adrIndex !== -1) {
+      decisions[adrIndex].status = status;
     }
 
-    // Update status
-    decisions[adrIndex].status = status;
+    // 2. Update option-level decisions
+    let architectureOptions = project.architectureOptions || [];
+    let updatedOptionIndex = -1;
+    let optionAdrIndex = -1;
 
-    const updated = await ProjectRepository.update(id, { decisions });
+    for (let i = 0; i < architectureOptions.length; i++) {
+      const opt = architectureOptions[i];
+      const idx = (opt.decisions || []).findIndex(d => d.id === adrId);
+      if (idx !== -1) {
+        updatedOptionIndex = i;
+        optionAdrIndex = idx;
+        break;
+      }
+    }
+
+    const updates: any = { decisions };
+    if (updatedOptionIndex !== -1 && optionAdrIndex !== -1) {
+      const optDecisions = [...(architectureOptions[updatedOptionIndex].decisions || [])];
+      optDecisions[optionAdrIndex].status = status;
+      architectureOptions[updatedOptionIndex].decisions = optDecisions;
+      updates.architectureOptions = architectureOptions;
+    }
+
+    const updated = await ProjectRepository.update(id, updates);
     res.json(updated);
   } catch (error) {
     next(error);

@@ -118,6 +118,8 @@ interface ArchitectureOption {
   };
   wellArchitectedReview?: WAFReview;
   criticReview?: CriticReview;
+  decisions?: ADR[];
+  createdAt?: string;
 }
 
 interface WAFGap {
@@ -289,6 +291,24 @@ export function ProjectDetail() {
 
   // Active option view selected
   const [selectedOptionView, setSelectedOptionView] = useState<string>('option-b');
+
+  // Group design alternatives in history by generation batch (within 5s of each other)
+  const groupOptionsByGeneration = () => {
+    const options = project?.architectureOptions || [];
+    const groups: Array<{ date: Date; options: typeof options }> = [];
+    const sorted = [...options].sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+    
+    for (const opt of sorted) {
+      const optTime = new Date(opt.createdAt || 0).getTime();
+      const matchingGroup = groups.find(g => Math.abs(g.date.getTime() - optTime) < 5000);
+      if (matchingGroup) {
+        matchingGroup.options.push(opt);
+      } else {
+        groups.push({ date: new Date(opt.createdAt || 0), options: [opt] });
+      }
+    }
+    return groups;
+  };
 
   // Interactive Teach Me state
   const [expandedTeachMe, setExpandedTeachMe] = useState<Record<string, boolean>>({});
@@ -1907,20 +1927,30 @@ export function ProjectDetail() {
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
               {/* Left Selector list */}
               <div className="space-y-2">
-                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest block mb-2 px-1">Design Alternatives</span>
-                {project?.architectureOptions?.map((opt) => (
-                  <button
-                    key={opt.id}
-                    onClick={() => handleSelectOptionView(opt.id)}
-                    className={`w-full text-left p-3.5 rounded-xl border transition-all duration-200 ${
-                      selectedOptionView === opt.id
-                        ? 'bg-violet-600/10 border-violet-500/30 text-violet-400 shadow-lg'
-                        : 'bg-[#0d1321]/30 border-white/5 hover:border-white/10 text-gray-400 hover:text-gray-200'
-                    }`}
-                  >
-                    <span className="text-xs font-bold block mb-1">{opt.name}</span>
-                    <span className="text-[10px] text-gray-500 block">Complexity: {opt.complexity} | Migration: {opt.migrationEffort}</span>
-                  </button>
+                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest block mb-4 px-1">Design Alternatives</span>
+                {groupOptionsByGeneration().map((group, groupIdx) => (
+                  <div key={groupIdx} className="space-y-1.5 mb-6">
+                    <span className="text-[9px] font-extrabold text-violet-400/80 uppercase tracking-widest block px-1">
+                      {groupIdx === 0 ? 'Latest Alternatives' : `History - Version ${groupOptionsByGeneration().length - groupIdx}`}
+                      <span className="text-[8px] text-gray-500 font-normal normal-case block mt-0.5">
+                        {group.date.toLocaleString()}
+                      </span>
+                    </span>
+                    {group.options.map((opt) => (
+                      <button
+                        key={opt.id}
+                        onClick={() => handleSelectOptionView(opt.id)}
+                        className={`w-full text-left p-3.5 rounded-xl border transition-all duration-200 ${
+                          selectedOptionView === opt.id
+                            ? 'bg-violet-600/10 border-violet-500/30 text-violet-400 shadow-lg'
+                            : 'bg-[#0d1321]/30 border-white/5 hover:border-white/10 text-gray-400 hover:text-gray-200'
+                        }`}
+                      >
+                        <span className="text-xs font-bold block mb-1">{opt.name}</span>
+                        <span className="text-[10px] text-gray-500 block">Complexity: {opt.complexity} | Migration: {opt.migrationEffort}</span>
+                      </button>
+                    ))}
+                  </div>
                 ))}
 
                 <div className="pt-6 px-1">
@@ -2282,7 +2312,7 @@ export function ProjectDetail() {
               <div className="flex items-center gap-1.5 mt-2">
                 <span className="text-[9px] uppercase tracking-wider text-gray-500 font-bold">Option Selected:</span>
                 <span className="text-[10px] bg-violet-500/10 text-violet-400 border border-violet-500/20 px-2 py-0.5 rounded font-bold">
-                  {project?.architectureOptions?.find(opt => opt.id === (project.selectedOptionId || 'option-a'))?.name || 'Option A'}
+                  {project?.architectureOptions?.find(opt => opt.id === selectedOptionView)?.name || 'Option A'}
                 </span>
               </div>
             </div>
@@ -2459,7 +2489,7 @@ export function ProjectDetail() {
               <div className="flex items-center gap-1.5 mt-2">
                 <span className="text-[9px] uppercase tracking-wider text-gray-500 font-bold">Option Selected:</span>
                 <span className="text-[10px] bg-violet-500/10 text-violet-400 border border-violet-500/20 px-2 py-0.5 rounded font-bold">
-                  {project?.architectureOptions?.find(opt => opt.id === (project.selectedOptionId || 'option-a'))?.name || 'Option A'}
+                  {project?.architectureOptions?.find(opt => opt.id === selectedOptionView)?.name || 'Option A'}
                 </span>
               </div>
             </div>
@@ -2628,11 +2658,8 @@ export function ProjectDetail() {
       {activeTab === 'adr' && (
         <div className="space-y-6">
           {(() => {
-            const activeOptionId = project?.selectedOptionId || 'option-a';
-            const optionDecisions = (project?.decisions || []).filter(
-              d => (d.affectedOptionId || 'option-a') === activeOptionId
-            );
-            const activeOption = project?.architectureOptions?.find(opt => opt.id === activeOptionId);
+            const activeOption = project?.architectureOptions?.find(opt => opt.id === selectedOptionView);
+            const optionDecisions = activeOption?.decisions || [];
             const activeCritic = activeOption?.criticReview;
             const isStale = activeCritic?.isStale === true;
 
@@ -2656,18 +2683,14 @@ export function ProjectDetail() {
               <div className="flex items-center gap-1.5 mt-2">
                 <span className="text-[9px] uppercase tracking-wider text-gray-500 font-bold">Option Selected:</span>
                 <span className="text-[10px] bg-violet-500/10 text-violet-400 border border-violet-500/20 px-2 py-0.5 rounded font-bold">
-                  {project?.architectureOptions?.find(opt => opt.id === (project.selectedOptionId || 'option-a'))?.name || 'Option A'}
+                  {project?.architectureOptions?.find(opt => opt.id === selectedOptionView)?.name || 'Option A'}
                 </span>
               </div>
             </div>
 
             {(() => {
-              const activeOptionId = project?.selectedOptionId || 'option-a';
-              const optionDecisions = (project?.decisions || []).filter(
-                d => (d.affectedOptionId || 'option-a') === activeOptionId
-              );
-              
-              const activeOption = project?.architectureOptions?.find(opt => opt.id === activeOptionId);
+              const activeOption = project?.architectureOptions?.find(opt => opt.id === selectedOptionView);
+              const optionDecisions = activeOption?.decisions || [];
               const activeCritic = activeOption?.criticReview;
               const isStale = activeCritic?.isStale === true;
 
@@ -2703,12 +2726,9 @@ export function ProjectDetail() {
             })()}
           </div>
 
-          {/* Filtering decisions to only show for the currently selected option */}
           {(() => {
-            const activeOptionId = project?.selectedOptionId || 'option-a';
-            const optionDecisions = (project?.decisions || []).filter(
-              d => (d.affectedOptionId || 'option-a') === activeOptionId
-            );
+            const activeOption = project?.architectureOptions?.find(opt => opt.id === selectedOptionView);
+            const optionDecisions = activeOption?.decisions || [];
 
             const acceptedDecisions = optionDecisions.filter(d => d.status === 'Accepted');
             const rejectedDecisions = optionDecisions.filter(d => d.status === 'Rejected');
@@ -2813,7 +2833,7 @@ export function ProjectDetail() {
                 {optionDecisions.length > 0 && (
                   <div className="p-6 bg-[#090d16] border border-white/5 rounded-xl space-y-6">
                     <h3 className="text-xs font-bold text-gray-300 uppercase tracking-wider border-b border-white/5 pb-2">
-                      Final Architecture Log — {project?.architectureOptions?.find(opt => opt.id === activeOptionId)?.name || 'Option A'}
+                      Final Architecture Log — {project?.architectureOptions?.find(opt => opt.id === selectedOptionView)?.name || 'Option A'}
                     </h3>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
