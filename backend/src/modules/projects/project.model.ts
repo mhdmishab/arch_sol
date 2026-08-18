@@ -87,6 +87,9 @@ export interface StructuredRequirements {
     monthlyBudget?: number;
     maximumBudget?: number;
     costSensitivity?: 'Low' | 'Medium' | 'High';
+    m365LicenseTier?: string;
+    m365UserCount?: number;
+    powerAutomatePremiumAdminOnly?: boolean;
   };
   development: {
     existingTeamSkills?: string;
@@ -338,7 +341,10 @@ export function createDefaultStructuredRequirements(data?: Partial<ArchitectureP
     budget: {
       monthlyBudget: undefined,
       maximumBudget: undefined,
-      costSensitivity: 'Medium'
+      costSensitivity: 'Medium',
+      m365LicenseTier: 'None',
+      m365UserCount: undefined,
+      powerAutomatePremiumAdminOnly: false
     },
     development: {
       existingTeamSkills: '',
@@ -411,7 +417,10 @@ const StructuredRequirementsSchema = new Schema<StructuredRequirements>({
   budget: {
     monthlyBudget: { type: Number },
     maximumBudget: { type: Number },
-    costSensitivity: { type: String, enum: ['Low', 'Medium', 'High'], default: 'Medium' }
+    costSensitivity: { type: String, enum: ['Low', 'Medium', 'High'], default: 'Medium' },
+    m365LicenseTier: { type: String, default: 'None' },
+    m365UserCount: { type: Number },
+    powerAutomatePremiumAdminOnly: { type: Boolean, default: false }
   },
   development: {
     existingTeamSkills: { type: String, default: '' },

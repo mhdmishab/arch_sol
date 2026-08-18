@@ -114,7 +114,6 @@ export function calculateDeterministicConfidence(reqs: StructuredRequirements): 
 
   // Development Team (4 fields)
   checkValue(reqs.development?.existingTeamSkills);
-  checkValue(reqs.development?.preferredLanguage);
   checkValue(reqs.development?.existingCodebase);
   checkValue(reqs.development?.deploymentModel);
 

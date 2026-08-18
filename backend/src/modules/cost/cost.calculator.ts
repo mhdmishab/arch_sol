@@ -35,6 +35,10 @@ export class CostCalculator {
     const targetBudget = project.structuredRequirements?.budget?.monthlyBudget || 3000;
     const maxBudget = project.structuredRequirements?.budget?.maximumBudget || 5000;
 
+    const m365LicenseTier = project.structuredRequirements?.budget?.m365LicenseTier || 'None';
+    const m365UserCount = project.structuredRequirements?.budget?.m365UserCount || project.structuredRequirements?.users?.userCount || project.expectedUsers || 1000;
+    const powerAutomatePremiumAdminOnly = project.structuredRequirements?.budget?.powerAutomatePremiumAdminOnly || false;
+
     // Parse data volume string (e.g. "500 GB" -> 500)
     const parseDataVolumeGB = (volStr?: string): number => {
       if (!volStr) return 100;
@@ -74,6 +78,7 @@ export class CostCalculator {
         let lowQty = service.estimatedUsageQuantity || 1;
         let expectedQty = service.estimatedUsageQuantity || 1;
         let highQty = service.estimatedUsageQuantity || 1;
+        let reasonSelected = service.reasonSelected;
 
         const serviceNameLower = service.serviceName.toLowerCase();
         const skuLower = service.sku.toLowerCase();
@@ -92,12 +97,18 @@ export class CostCalculator {
         else if (serviceNameLower.includes('power automate') || serviceNameLower.includes('powerautomate')) {
           costCategory = 'Microsoft Licensing';
           sourceType = 'Microsoft Published License';
+          unit = powerAutomatePremiumAdminOnly ? 'Admin User/Month' : 'User/Month';
           unitPrice = 15.0; // Power Automate Premium default
-          unit = 'User/Month';
           
-          lowQty = Math.max(1, Math.round(expectedUsers * 0.1));
-          expectedQty = expectedUsers;
-          highQty = highUsers;
+          if (powerAutomatePremiumAdminOnly) {
+            lowQty = 1;
+            expectedQty = 2; // Typically 2 admins for workflow setups
+            highQty = 5;
+          } else {
+            lowQty = Math.max(1, Math.round(expectedUsers * 0.1));
+            expectedQty = expectedUsers;
+            highQty = highUsers;
+          }
         }
         else if (serviceNameLower.includes('dataverse')) {
           costCategory = 'Microsoft Licensing';
@@ -112,8 +123,11 @@ export class CostCalculator {
         else if (serviceNameLower.includes('sharepoint') || serviceNameLower.includes('share point')) {
           costCategory = 'Microsoft Licensing';
           sourceType = 'Microsoft Published License';
-          unitPrice = 0.2; // SharePoint Storage capacity per GB
+          unitPrice = m365LicenseTier !== 'None' ? 0.0 : 0.2; // SharePoint Storage capacity per GB (fully covered by M365 baseline)
           unit = 'GB/Month';
+          if (m365LicenseTier !== 'None') {
+            reasonSelected = `${service.reasonSelected} (Storage cost fully covered by M365 license)`;
+          }
           
           lowQty = Math.max(1, Math.round(dataVolumeGB * 0.5));
           expectedQty = dataVolumeGB;
@@ -195,9 +209,44 @@ export class CostCalculator {
           lowCost: costLow,
           expectedCost: costExpected,
           highCost: costHigh,
-          reasonSelected: service.reasonSelected,
+          reasonSelected,
           costCategory,
           sourceType
+        });
+      }
+
+      // Add baseline M365 license seat costs if selected
+      if (m365LicenseTier !== 'None') {
+        let m365Price = 0;
+        if (m365LicenseTier === 'M365 Business Basic') m365Price = 2.0;
+        else if (m365LicenseTier === 'M365 Business Standard') m365Price = 10.0;
+        else if (m365LicenseTier === 'M365 Business Premium') m365Price = 22.0;
+        else if (m365LicenseTier === 'M365 E3') m365Price = 36.0;
+        else if (m365LicenseTier === 'M365 E5') m365Price = 57.0;
+
+        const m365CostLow = lowUsers * m365Price;
+        const m365CostExpected = m365UserCount * m365Price;
+        const m365CostHigh = highUsers * m365Price;
+
+        totalLow += m365CostLow;
+        totalExpected += m365CostExpected;
+        totalHigh += m365CostHigh;
+
+        components.push({
+          serviceName: m365LicenseTier,
+          sku: 'Baseline User License',
+          category: 'Licensing',
+          unitPrice: m365Price,
+          unit: 'User/Month',
+          lowQty: lowUsers,
+          expectedQty: m365UserCount,
+          highQty: highUsers,
+          lowCost: m365CostLow,
+          expectedCost: m365CostExpected,
+          highCost: m365CostHigh,
+          reasonSelected: `Baseline enterprise productivity & collaboration seat licensing (${m365LicenseTier})`,
+          costCategory: 'Microsoft Licensing',
+          sourceType: 'Microsoft Published License'
         });
       }
 

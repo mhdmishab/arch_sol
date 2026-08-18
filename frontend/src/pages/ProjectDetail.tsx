@@ -71,6 +71,9 @@ interface StructuredRequirements {
     monthlyBudget?: number;
     maximumBudget?: number;
     costSensitivity?: 'Low' | 'Medium' | 'High';
+    m365LicenseTier?: string;
+    m365UserCount?: number;
+    powerAutomatePremiumAdminOnly?: boolean;
   };
   development: {
     existingTeamSkills?: string;
@@ -1853,6 +1856,7 @@ export function ProjectDetail() {
             {activeSpecSection === 'budget' && (
               <div className="space-y-4">
                 <h3 className="text-sm font-bold text-gray-300 border-b border-white/5 pb-2 mb-4">Budget & Costs</h3>
+                
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="space-y-1.5">
                     <label className="text-[10px] font-bold text-gray-400 uppercase">Target Monthly Budget ($ USD)</label>
@@ -1886,8 +1890,55 @@ export function ProjectDetail() {
                     </select>
                   </div>
                 </div>
+
+                <div className="pt-2 border-t border-white/5 mt-4 space-y-4">
+                  <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Microsoft 365 & Power Platform Licensing</h4>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-bold text-gray-400 uppercase">Current M365 License Tier</label>
+                      <select
+                        value={formRequirements.budget.m365LicenseTier || 'None'}
+                        onChange={(e) => updateFormField('budget', 'm365LicenseTier', e.target.value)}
+                        className="w-full px-3 py-2 bg-[#080c14] border border-white/5 rounded-lg text-xs text-gray-200 focus:outline-none focus:border-violet-500"
+                      >
+                        <option value="None">None / Custom</option>
+                        <option value="M365 Business Basic">M365 Business Basic (₹170 / ~$2.00)</option>
+                        <option value="M365 Business Standard">M365 Business Standard (₹830 / ~$10.00)</option>
+                        <option value="M365 Business Premium">M365 Business Premium (₹1,830 / ~$22.00)</option>
+                        <option value="M365 E3">M365 E3 (~₹3,245 / ~$36.00)</option>
+                        <option value="M365 E5">M365 E5 (~₹4,740+ / ~$57.00)</option>
+                      </select>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-bold text-gray-400 uppercase">M365 License User Count</label>
+                      <input
+                        type="number"
+                        placeholder="defaults to active users"
+                        value={formRequirements.budget.m365UserCount || ''}
+                        onChange={(e) => updateFormField('budget', 'm365UserCount', e.target.value ? Number(e.target.value) : undefined)}
+                        className="w-full px-3 py-2 bg-[#080c14] border border-white/5 rounded-lg text-xs text-gray-200 focus:outline-none focus:border-violet-500"
+                      />
+                    </div>
+
+                    <div className="flex items-center space-x-2 pt-5">
+                      <input
+                        type="checkbox"
+                        id="powerAutomatePremiumAdminOnly"
+                        checked={formRequirements.budget.powerAutomatePremiumAdminOnly || false}
+                        onChange={(e) => updateFormField('budget', 'powerAutomatePremiumAdminOnly', e.target.checked)}
+                        className="h-4 w-4 rounded border-white/5 bg-[#080c14] text-violet-600 focus:ring-violet-500"
+                      />
+                      <label htmlFor="powerAutomatePremiumAdminOnly" className="text-xs font-semibold text-gray-300 cursor-pointer">
+                        Power Automate Admin-Only License (Saves cost)
+                      </label>
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
+
 
             {activeSpecSection === 'development' && (
               <div className="space-y-4">
