@@ -1,0 +1,67 @@
+{
+  "apimanagement-eastus-developer": {
+    "price": 0,
+    "unit": "1/Hour",
+    "updatedAt": "2026-08-17T21:07:46.429Z"
+  },
+  "functions-eastus-consumption": {
+    "price": 0.000016,
+    "unit": "1 GB Second",
+    "updatedAt": "2026-08-17T21:09:34.992Z"
+  },
+  "servicebus-eastus-standard": {
+    "price": 0.013441,
+    "unit": "1/Hour",
+    "updatedAt": "2026-08-17T21:09:35.127Z"
+  },
+  "virtualmachines-eastus-premiumv3p1v3": {
+    "price": 6.2616,
+    "unit": "1 Hour",
+    "updatedAt": "2026-08-17T21:09:35.447Z"
+  },
+  "apimanagement-centralindia-consumption": {
+    "price": 0.035,
+    "unit": "10K",
+    "updatedAt": "2026-08-17T21:54:09.345Z"
+  },
+  "functions-centralindia-consumption": {
+    "price": 0.000037,
+    "unit": "1 GB Second",
+    "updatedAt": "2026-08-17T21:54:09.491Z"
+  },
+  "servicebus-centralindia-standard": {
+    "price": 10,
+    "unit": "1/Month",
+    "updatedAt": "2026-08-17T21:54:09.640Z"
+  },
+  "virtualmachines-centralindia-premiumv3p1v3": {
+    "price": 2.168,
+    "unit": "1 Hour",
+    "updatedAt": "2026-08-17T21:54:09.999Z"
+  },
+  "sqldatabase-centralindia-standards1(20dtu)": {
+    "price": 1.004634,
+    "unit": "1 Hour",
+    "updatedAt": "2026-08-17T21:54:10.186Z"
+  },
+  "virtualmachines-centralindia-basicb1": {
+    "price": 2.168,
+    "unit": "1 Hour",
+    "updatedAt": "2026-08-17T23:19:20.932Z"
+  },
+  "azuremonitor-centralindia-pay-as-you-go": {
+    "price": 0.14,
+    "unit": "1 GB/Day",
+    "updatedAt": "2026-08-18T00:11:43.404Z"
+  },
+  "sqldatabase-centralindia-standards1": {
+    "price": 1.004634,
+    "unit": "1 Hour",
+    "updatedAt": "2026-08-18T00:11:51.281Z"
+  },
+  "apimanagement-centralindia-standard": {
+    "price": 0.34247,
+    "unit": "1 Hour",
+    "updatedAt": "2026-08-18T07:11:11.238Z"
+  }
+}

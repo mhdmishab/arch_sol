@@ -1,0 +1,42 @@
+{
+  "apimanagement-eastus-developer": {
+    "price": 0.0658,
+    "unit": "1 Hour",
+    "updatedAt": "2026-08-17T21:36:24.577Z"
+  },
+  "sqldatabase-westus-standards1": {
+    "price": 0.167439,
+    "unit": "1 Hour",
+    "updatedAt": "2026-08-17T21:37:23.572Z"
+  },
+  "apimanagement-eastus-consumption": {
+    "price": 0.035,
+    "unit": "10K",
+    "updatedAt": "2026-08-17T21:51:26.288Z"
+  },
+  "functions-eastus-consumption": {
+    "price": 0.000016,
+    "unit": "1 GB Second",
+    "updatedAt": "2026-08-17T21:51:26.410Z"
+  },
+  "servicebus-eastus-standard": {
+    "price": 0.013441,
+    "unit": "1/Hour",
+    "updatedAt": "2026-08-17T21:51:26.670Z"
+  },
+  "virtualmachines-eastus-premiumv3p1v3": {
+    "price": 6.2616,
+    "unit": "1 Hour",
+    "updatedAt": "2026-08-17T21:51:26.928Z"
+  },
+  "sqldatabase-eastus-standards1(20dtu)": {
+    "price": 0.025,
+    "unit": "1 GB/Month",
+    "updatedAt": "2026-08-17T21:51:27.123Z"
+  },
+  "sqldatabase-eastus-premiump1": {
+    "price": 0.025,
+    "unit": "1 GB/Month",
+    "updatedAt": "2026-08-17T23:17:40.005Z"
+  }
+}
